@@ -12,9 +12,9 @@ CGFloat POPopupOverlayerAnimationDuration = 0.3;
 
 CGFloat POPopupOverlayerMaxVisibleItems = 30;
 
-@interface POPopupOverlayerContainerView : UIView
+@interface YRPopupOverlayerContainerView : UIView
 @end
-@implementation POPopupOverlayerContainerView
+@implementation YRPopupOverlayerContainerView
 @end
 
 @interface POPopupOverlayer ()<UIGestureRecognizerDelegate>
@@ -70,7 +70,7 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
     self.maxTranslation = CGSizeEqualToSize(CGSizeZero, [self bounds].size) ? CGSizeMake(100, 100) : [self bounds].size;
     self.mutableItemViews = [NSMutableDictionary dictionary];
     self.reusingItemViews = [NSMutableSet set];
-    self.itemViewRotateAngle = M_PI/180 * 10;
+    self.itemViewRotateAngle = 10 /180. * M_PI;
     self.numberOfVisibleItemViews = 3;
     self.allowBackToFront = YES;
     self.allowDirections = POPopupOverlayerAnimationDirectionTop | POPopupOverlayerAnimationDirectionBottom | POPopupOverlayerAnimationDirectionLeft | POPopupOverlayerAnimationDirectionRight;
@@ -205,10 +205,13 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
     }
 }
 
-- (void)_deleteItemView:(UIView *)itemView atIndex:(NSInteger)nIndex{
-    [self queueReusingItemView:itemView];
-    [[self mutableItemViews] removeObjectForKey:@(nIndex)];
-    [[itemView superview] removeFromSuperview];
+- (void)_deleteAtIndex:(NSInteger)nIndex{
+    UIView *itemView = [self mutableItemViews][@(nIndex)];
+    if (itemView) {
+        [self queueReusingItemView:itemView];
+        [[self mutableItemViews] removeObjectForKey:@(nIndex)];
+        [[itemView superview] removeFromSuperview];
+    }
 }
 
 - (void)_removeItemViewAtIndex:(NSUInteger)nIndex {
@@ -241,14 +244,27 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
 }
 
 - (void)_restoreTransformExcludeIndex:(NSUInteger)excludeIndex animated:(BOOL)animated{
-    [self _rotateTransformExcludeIndex:excludeIndex indexOffset:0 progress:0 animated:animated];
+    [self _restoreTransformExcludeIndex:excludeIndex animated:animated completion:nil];
+}
+
+- (void)_restoreTransformExcludeIndex:(NSUInteger)excludeIndex animated:(BOOL)animated completion:(void (^)())completion{
+    [self _rotateTransformExcludeIndex:excludeIndex indexOffset:0 progress:0 animated:animated completion:completion];
 }
 
 - (void)_rotateTransformExcludeIndex:(NSUInteger)excludeIndex progress:(CGFloat)progress animated:(BOOL)animated{
-    [self _rotateTransformExcludeIndex:excludeIndex indexOffset:0 progress:progress animated:animated];
+    [self _rotateTransformExcludeIndex:excludeIndex progress:progress animated:animated completion:nil];
+}
+
+- (void)_rotateTransformExcludeIndex:(NSUInteger)excludeIndex progress:(CGFloat)progress animated:(BOOL)animated completion:(void (^)())completion{
+    [self _rotateTransformExcludeIndex:excludeIndex indexOffset:0 progress:progress animated:animated completion:completion];
 }
 
 - (void)_rotateTransformExcludeIndex:(NSUInteger)excludeIndex indexOffset:(NSInteger)indexOffset progress:(CGFloat)progress animated:(BOOL)animated{
+    [self _rotateTransformExcludeIndex:excludeIndex indexOffset:indexOffset progress:progress
+                              animated:animated completion:nil];
+}
+
+- (void)_rotateTransformExcludeIndex:(NSUInteger)excludeIndex indexOffset:(NSInteger)indexOffset progress:(CGFloat)progress animated:(BOOL)animated completion:(void (^)())completion{
     void (^transform)() = ^(){
         NSArray *indexesForVisibleItemViews = [self indexesForVisibleItemViews];
         NSUInteger numberOfItemViews = [self numberOfItemViews];
@@ -270,9 +286,16 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
         }
     };
     if (animated) {
-        [UIView animateWithDuration:POPopupOverlayerAnimationDuration animations:transform];
+        [UIView animateWithDuration:POPopupOverlayerAnimationDuration animations:transform completion:^(BOOL finished) {
+            if (completion) {
+                completion();
+            }
+        }];
     } else {
         transform();
+        if (completion) {
+            completion();
+        }
     }
 }
 
@@ -286,6 +309,8 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
     //account for retina
     itemView.superview.layer.rasterizationScale = [UIScreen mainScreen].scale;
     
+    //return back
+    itemView.superview.layer.autoreverses = NO;
     //calculate transform
     CATransform3D transform = [self transformAtIndex:nIndex progress:progress];
     
@@ -346,21 +371,23 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
 
 #pragma mark - accessor
 
-- (CATransform3D)_transformForMoveOutItemView:(UIView *)itemView atTranslation:(CGPoint)translation{
-    POPopupOverlayerAnimationDirection direction = [self directionAtTranslation:translation];
-    
-    return [self _transformForMoveOutItemView:itemView onDirection:direction];
-}
-
 - (CATransform3D)_transformForMoveOutItemView:(UIView *)itemView onDirection:(POPopupOverlayerAnimationDirection)direction{
     
-    CGPoint tranformTranslation = [self defaultTransformTranslationOnDirection:direction];
+    return [self _transformForMoveOutItemView:itemView translation:CGPointZero direction:direction];
+}
+
+- (CATransform3D)_transformForMoveOutItemView:(UIView *)itemView translation:(CGPoint)translation direction:(POPopupOverlayerAnimationDirection)direction{
     
-    CATransform3D transform = CATransform3DMakeTranslation(tranformTranslation.x, tranformTranslation.y, 0);
+    CATransform3D transform = CATransform3DIdentity;
     
     if ([[self delegate] respondsToSelector:@selector(popupOverlayer:itemViewTransformOnDirection:defaultTransform:)]) {
-        return [[self delegate] popupOverlayer:self itemViewTransformOnDirection:direction defaultTransform:transform];
+        transform = [[self delegate] popupOverlayer:self itemViewTransformOnDirection:direction defaultTransform:transform];
     }
+    
+    translation = [self defaultTransformAtTranslation:translation direction:direction];
+    
+    transform = CATransform3DTranslate(transform, translation.x, translation.y, 0);
+    
     return transform;
 }
 
@@ -391,27 +418,29 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
     return MIN(distance / maxDistance, 1);
 }
 
-- (CGPoint)defaultTransformTranslationOnDirection:(POPopupOverlayerAnimationDirection)direction{
-    
+- (CGPoint)defaultTransformAtTranslation:(CGPoint)translation direction:(POPopupOverlayerAnimationDirection)direction{
     UIWindow *window = [[[UIApplication sharedApplication] delegate] window];
     
-    CGPoint translation = CGPointZero;
-    CGSize windowSize = [window bounds].size;
+    CGPoint toTranslation = CGPointZero;
+    CGSize  windowSize = [window bounds].size;
     CGPoint centerInWindow = [[self contentView] convertPoint:[[self contentView] center] toView:window];
     
-    if (direction & POPopupOverlayerAnimationDirectionTop && [self allowDirections] & POPopupOverlayerAnimationDirectionTop) {
-        translation.y -= centerInWindow.y;
-    }
-    if (direction & POPopupOverlayerAnimationDirectionBottom && [self allowDirections] & POPopupOverlayerAnimationDirectionBottom) {
-        translation.y += windowSize.height - centerInWindow.y;
-    }
+    CGFloat scale = translation.y == 0 ? ((windowSize.width - centerInWindow.x) / (windowSize.height - centerInWindow.y)) : fabs(translation.x / translation.y);
+    
     if (direction & POPopupOverlayerAnimationDirectionLeft && [self allowDirections] & POPopupOverlayerAnimationDirectionLeft) {
-        translation.x -= centerInWindow.x;
+        toTranslation.x = -(windowSize.width - centerInWindow.x);
     }
     if (direction & POPopupOverlayerAnimationDirectionRight && [self allowDirections] & POPopupOverlayerAnimationDirectionRight) {
-        translation.x += windowSize.width - centerInWindow.x;
+        toTranslation.x = (windowSize.width - centerInWindow.x);
     }
-    return translation;
+    
+    if (direction & POPopupOverlayerAnimationDirectionTop && [self allowDirections] & POPopupOverlayerAnimationDirectionTop) {
+        toTranslation.y = -fabs(MAX(1, fabs(toTranslation.x)) / scale);
+    }
+    if (direction & POPopupOverlayerAnimationDirectionBottom && [self allowDirections] & POPopupOverlayerAnimationDirectionBottom) {
+        toTranslation.y = fabs(MAX(1, fabs(toTranslation.x)) / scale);
+    }
+    return toTranslation;
 }
 
 - (POPopupOverlayerAnimationDirection)directionAtTranslation:(CGPoint)translation{
@@ -430,7 +459,7 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
 }
 
 - (UIView *)containerView:(UIView *)itemView{
-    UIView *containerView = [POPopupOverlayerContainerView new];
+    UIView *containerView = [YRPopupOverlayerContainerView new];
     [containerView addSubview:itemView];
     return containerView;
 }
@@ -537,7 +566,8 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
     progress = MAX(progress, 0);
     
     NSUInteger number = nIndex % [self numberOfVisibleItemViews];
-    return pow(-1, number % 2 + 1) * (number + 1) / 2 * [self itemViewRotateAngle] * (1 - progress) * (nIndex > 0);
+    
+    return pow(-1, number % 2 + 1) * ((number + 1) / 2) * [self itemViewRotateAngle] * (1 - progress);
 }
 
 #pragma mark - public
@@ -560,21 +590,27 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
     [self setNeedsLayout];
 }
 
-- (void)popOverTopItemViewOnDirection:(POPopupOverlayerAnimationDirection)direction animated:(BOOL)animated;{
-    direction = [self adjustDirection:direction];
+- (BOOL)popOverTopItemViewOnDirection:(POPopupOverlayerAnimationDirection)direction animated:(BOOL)animated;{
+    
+    return [self popOverTopItemViewAtTranslation:CGPointZero direction:direction animated:animated];
+}
+
+- (BOOL)popOverTopItemViewAtTranslation:(CGPoint)translation direction:(POPopupOverlayerAnimationDirection)direction  animated:(BOOL)animated;{
     NSInteger currentIndex = [self currentItemIndex];
     UIView *itemView = [self itemViewAtIndex:currentIndex];
-    
     BOOL shouldPopupOver = YES;
     if ([[self delegate] respondsToSelector:@selector(popupOverlayer:shouldPopupOverItemView:direction:atIndex:)]) {
         shouldPopupOver = [[self delegate] popupOverlayer:self shouldPopupOverItemView:itemView direction:direction atIndex:currentIndex];
     }
     if (!shouldPopupOver) {
         [self _restoreTransformExcludeIndex:NSNotFound animated:YES];
+        return NO;
     }
+    
     BOOL allowBackToFront = [self allowBackToFront];
+    
     void (^completion)() = ^{
-        [self _deleteItemView:itemView atIndex:currentIndex];
+        [self _deleteAtIndex:currentIndex];
         if ([self numberOfItemViews] - currentIndex - 1 > 0 || allowBackToFront) {
             [self _loadUnloadItemViews];
             [self _restoreTransformExcludeIndex:NSNotFound animated:NO];
@@ -585,7 +621,8 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
     };
     if (animated) {
         self.userInteractionEnabled = NO;
-        CATransform3D transform = [self _transformForMoveOutItemView:itemView onDirection:direction];
+        //        itemView.superview.layer.transform = CATransform3DMakeTranslation(translation.x, translation.y, 0);
+        CATransform3D transform = [self _transformForMoveOutItemView:itemView translation:translation direction:direction];
         [UIView animateWithDuration:POPopupOverlayerAnimationDuration animations:^{
             itemView.superview.alpha = 0;
             itemView.superview.layer.transform = transform;
@@ -596,6 +633,7 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
     } else {
         completion();
     }
+    return YES;
 }
 
 - (void)removeItemAtIndex:(NSUInteger)nIndex onDirection:(POPopupOverlayerAnimationDirection)direction animated:(BOOL)animated;{
@@ -612,7 +650,7 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
         } completion:^(BOOL finished) {
             self.numberOfItemViews--;
             
-            [self _deleteItemView:itemView atIndex:nIndex];
+            [self _deleteAtIndex:nIndex];
             [self _removeItemViewAtIndex:nIndex];
             [self _loadUnloadItemViews];
             [self _restoreTransformExcludeIndex:NSNotFound animated:YES];
@@ -621,7 +659,7 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
     } else {
         
         self.numberOfItemViews--;
-        [self _deleteItemView:itemView atIndex:nIndex];
+        [self _deleteAtIndex:nIndex];
         [self _removeItemViewAtIndex:nIndex];
         [self _loadUnloadItemViews];
         [self _restoreTransformExcludeIndex:NSNotFound animated:NO];
@@ -678,7 +716,6 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
 #pragma mark - actions
 
 - (IBAction)didPanGestureRecognizerChanged:(UIPanGestureRecognizer *)panGestureRecognizer{
-    
     NSUInteger currentIndex = [self currentItemIndex];
     UIView *itemView = [self itemViewAtIndex:currentIndex];
     if (!itemView) {
@@ -686,7 +723,7 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
     }
     CGPoint location = [panGestureRecognizer locationInView:self];
     CGPoint translation = [panGestureRecognizer translationInView:self];
-    translation = [self adjustTranslation:translation];
+    CGPoint limitTranslation = [self adjustTranslation:translation];
     
     switch ([panGestureRecognizer state]) {
         case UIGestureRecognizerStateBegan:
@@ -694,26 +731,36 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
             break;
         case UIGestureRecognizerStateChanged:
         {
-            CGFloat progress = [self _progressForMovingCurrentItemViewWithTranslation:translation location:location atIndex:currentIndex];
+            CGFloat progress = [self _progressForMovingCurrentItemViewWithTranslation:limitTranslation location:location atIndex:currentIndex];
             
             [self _rotateTransformExcludeIndex:currentIndex indexOffset:-1 progress:progress animated:NO];
             
-            itemView.superview.layer.transform = [self _transformForMovingItemView:itemView atTranslation:translation];
+            itemView.superview.layer.transform = [self _transformForMovingItemView:itemView atTranslation:limitTranslation];
             
-            [self _movingCurrentItemViewWithTranslation:translation atIndex:currentIndex];
+            [self _movingCurrentItemViewWithTranslation:limitTranslation atIndex:currentIndex];
         }   break;
         case UIGestureRecognizerStateEnded:
-            if ([self _defaultProgressWithTranslation:translation] > 0.5) {
-                [self popOverTopItemViewOnDirection:[self directionAtTranslation:translation] animated:YES];
+        {
+            if ([self _defaultProgressWithTranslation:limitTranslation] > 0.5) {
+                [self popOverTopItemViewAtTranslation:translation direction:[self directionAtTranslation:limitTranslation] animated:YES];
                 
             } else {
-                [self _restoreTransformExcludeIndex:NSNotFound animated:YES];
+                self.userInteractionEnabled = NO;
+                [self _restoreTransformExcludeIndex:NSNotFound animated:YES completion:^{
+                    self.userInteractionEnabled = YES;
+                }];
             }
-            [self _didMoveCurrentItemViewWithTranslation:translation atIndex:currentIndex];
+            [self _didMoveCurrentItemViewWithTranslation:limitTranslation atIndex:currentIndex];
+        }
             break;
         case UIGestureRecognizerStateCancelled:
         case UIGestureRecognizerStateFailed:
-            [self _restoreTransformExcludeIndex:NSNotFound animated:YES];
+        {
+            self.userInteractionEnabled = NO;
+            [self _restoreTransformExcludeIndex:NSNotFound animated:YES completion:^{
+                self.userInteractionEnabled = YES;
+            }];
+        }
             break;
         default:
             break;

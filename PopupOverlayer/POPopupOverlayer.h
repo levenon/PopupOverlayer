@@ -71,7 +71,7 @@ typedef NS_ENUM(NSInteger, POPopupOverlayerAnimationDirection) {
 
 - (POPopupOverlayerAnimationDirection)directionAtTranslation:(CGPoint)translation;
 
-- (void)popOverTopItemViewOnDirection:(POPopupOverlayerAnimationDirection)direction animated:(BOOL)animated;
+- (BOOL)popOverTopItemViewOnDirection:(POPopupOverlayerAnimationDirection)direction animated:(BOOL)animated;
 
 - (void)insertItemAtIndex:(NSUInteger)nIndex animated:(BOOL)animated;
 - (void)removeItemAtIndex:(NSUInteger)nIndex onDirection:(POPopupOverlayerAnimationDirection)direction animated:(BOOL)animated;
