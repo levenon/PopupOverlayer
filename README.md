@@ -1,2 +1,2 @@
 # PopupOverlayer
-popup overlayer when swipping stop.
+popup overlayer when swipping stop. 
