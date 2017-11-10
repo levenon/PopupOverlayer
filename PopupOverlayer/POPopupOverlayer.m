@@ -73,7 +73,7 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
     self.itemViewRotateAngle = 10 /180. * M_PI;
     self.numberOfVisibleItemViews = 3;
     self.allowBackToFront = YES;
-    self.allowDirections = POPopupOverlayerAnimationDirectionTop | POPopupOverlayerAnimationDirectionBottom | POPopupOverlayerAnimationDirectionLeft | POPopupOverlayerAnimationDirectionRight;
+    self.allowDirections = POPopupOverlayerAnimationDirectionAll;
     
     self.contentView = [UIView new];
     self.contentView.layer.masksToBounds = NO;

@@ -15,6 +15,7 @@ typedef NS_ENUM(NSInteger, POPopupOverlayerAnimationDirection) {
     POPopupOverlayerAnimationDirectionLeft   = 1 << 2,
     POPopupOverlayerAnimationDirectionRight  = 1 << 3,
     POPopupOverlayerAnimationDirectionRandom = 1 << 4,
+    POPopupOverlayerAnimationDirectionAll = POPopupOverlayerAnimationDirectionTop | POPopupOverlayerAnimationDirectionBottom | POPopupOverlayerAnimationDirectionLeft | POPopupOverlayerAnimationDirectionRight,
 };
 
 @class POPopupOverlayer;
@@ -60,11 +61,20 @@ typedef NS_ENUM(NSInteger, POPopupOverlayerAnimationDirection) {
 
 @property (nonatomic, assign) id<POPopupOverlayerDelegate> delegate;
 @property (nonatomic, assign) id<POPopupOverlayerDataSource> dataSource;
+
+// Default is POPopupOverlayerAnimationDirectionAll.
 @property (nonatomic, assign) POPopupOverlayerAnimationDirection allowDirections;
-@property (nonatomic, assign) POPopupOverlayerAnimationDirection allowBackToFront;
+
+// Default is YES.
+@property (nonatomic, assign) BOOL allowBackToFront;
+
+// Default is half of size;
+@property (nonatomic, assign) CGSize maxTranslation;
+
+// Default is 10/180.f * M_PI
+@property (nonatomic, assign) CGFloat itemViewRotateAngle;
+
 @property (nonatomic, strong, readonly) NSArray *visibleItemViews;
-@property (nonatomic, assign) CGSize maxTranslation;        // Default is half of size;
-@property (nonatomic, assign) CGFloat itemViewRotateAngle;         // Default is 10/180.f * M_PI
 @property (nonatomic, assign, readonly) NSUInteger numberOfVisibleItemViews; // Default is 3.
 @property (nonatomic, assign, readonly) NSUInteger numberOfItemViews;
 @property (nonatomic, assign, readonly) NSUInteger currentItemIndex;
