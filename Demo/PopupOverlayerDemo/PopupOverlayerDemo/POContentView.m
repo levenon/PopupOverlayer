@@ -69,8 +69,9 @@
     
     self.popupOverlayer.delegate = self;
     self.popupOverlayer.dataSource = self;
-    self.popupOverlayer.maxTranslation = CGSizeMake(160, 160);
+    self.popupOverlayer.maximumTranslation = CGSizeMake(160, 160);
     self.popupOverlayer.itemViewRotateAngle = 5/180.f * M_PI;
+    self.popupOverlayer.allowDirections = POPopupOverlayerAnimationDirectionLeft;
     
     self.closeButton.titleLabel.font = [UIFont systemFontOfSize:24];
     self.closeButton.layer.cornerRadius = 48/2.;

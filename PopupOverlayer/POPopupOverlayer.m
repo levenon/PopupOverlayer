@@ -67,7 +67,7 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
 
 - (void)_initialize{
     
-    self.maxTranslation = CGSizeEqualToSize(CGSizeZero, [self bounds].size) ? CGSizeMake(100, 100) : [self bounds].size;
+    self.maximumTranslation = CGSizeEqualToSize(CGSizeZero, [self bounds].size) ? CGSizeMake(100, 100) : [self bounds].size;
     self.mutableItemViews = [NSMutableDictionary dictionary];
     self.reusingItemViews = [NSMutableSet set];
     self.itemViewRotateAngle = 10 /180. * M_PI;
@@ -410,7 +410,7 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
 - (CGFloat)_defaultProgressWithTranslation:(CGPoint)translation{
     
     CGFloat distance = sqrt(powf(translation.x, 2) + powf(translation.y, 2));
-    CGFloat maxDistance = sqrt(powf([self maxTranslation].width / 2., 2) + powf([self maxTranslation].width / 2., 2));
+    CGFloat maxDistance = sqrt(powf([self maximumTranslation].width / 2., 2) + powf([self maximumTranslation].width / 2., 2));
     
     if (maxDistance <= 0) {
         return 1.f;
