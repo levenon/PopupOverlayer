@@ -215,7 +215,7 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
 }
 
 - (void)_removeItemViewAtIndex:(NSUInteger)nIndex {
-    NSMutableDictionary *newItemViews = [NSMutableDictionary dictionaryWithCapacity:[[self mutableItemViews] count] - 1];
+    NSMutableDictionary *newItemViews = [NSMutableDictionary new];
     for (NSNumber *number in [self indexesForVisibleItemViews]) {
         NSUInteger i = [number integerValue];
         if (i < nIndex) {
@@ -228,7 +228,7 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
 }
 
 - (void)_insertItemView:(UIView *)view atIndex:(NSUInteger)nIndex {
-    NSMutableDictionary *newItemViews = [NSMutableDictionary dictionaryWithCapacity:[[self mutableItemViews] count] + 1];
+    NSMutableDictionary *newItemViews = [NSMutableDictionary new];
     for (NSNumber *number in [self indexesForVisibleItemViews]) {
         NSUInteger i = [number integerValue];
         if (i < nIndex) {
@@ -533,7 +533,7 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
 }
 
 - (CGPoint)adjustTranslation:(CGPoint)translation;{
-    if (![self allowDirections] & POPopupOverlayerAnimationDirectionLeft) {
+    if (!([self allowDirections] & POPopupOverlayerAnimationDirectionLeft)) {
         translation.x = MAX(translation.x, 0);
     }
     if (!([self allowDirections] & POPopupOverlayerAnimationDirectionRight)) {
@@ -565,7 +565,7 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
     progress = MIN(progress, 1);
     progress = MAX(progress, 0);
     
-    NSUInteger number = nIndex % [self numberOfVisibleItemViews];
+    NSUInteger number = [self numberOfVisibleItemViews] ? (nIndex % [self numberOfVisibleItemViews]) : 0;
     
     return pow(-1, number % 2 + 1) * ((number + 1) / 2) * [self itemViewRotateAngle] * (1 - progress);
 }
@@ -637,11 +637,10 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
 }
 
 - (void)removeItemAtIndex:(NSUInteger)nIndex onDirection:(POPopupOverlayerAnimationDirection)direction animated:(BOOL)animated;{
-    
     direction = [self adjustDirection:direction];
     nIndex = [self clampedIndex:nIndex];
-    UIView *itemView = [self itemViewAtIndex:nIndex];
     
+    UIView *itemView = [self itemViewAtIndex:nIndex];
     if (animated) {
         self.userInteractionEnabled = NO;
         CATransform3D transform = [self _transformForMoveOutItemView:itemView onDirection:direction];
@@ -657,7 +656,6 @@ CGFloat POPopupOverlayerMaxVisibleItems = 30;
             self.userInteractionEnabled = YES;
         }];
     } else {
-        
         self.numberOfItemViews--;
         [self _deleteAtIndex:nIndex];
         [self _removeItemViewAtIndex:nIndex];

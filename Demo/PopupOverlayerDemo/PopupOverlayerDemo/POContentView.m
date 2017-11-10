@@ -157,14 +157,18 @@
 #pragma mark - actions
 
 - (IBAction)didClickInsert:(id)sender{
-    [[self dataSource] insertObject:@"" atIndex:1];
-    [[self popupOverlayer] insertItemAtIndex:1 animated:YES];
+    
+    [[self dataSource] insertObject:@"" atIndex:0];
+    [[self popupOverlayer] insertItemAtIndex:0 animated:YES];
 }
 
 - (IBAction)didClickDelete:(id)sender{
+    if (![[self dataSource] count]) return;
     
-    [[self dataSource] removeObjectAtIndex:1];
-    [[self popupOverlayer] removeItemAtIndex:1 onDirection:POPopupOverlayerAnimationDirectionBottom animated:YES];
+    NSUInteger index = [[self dataSource] count] > 1;
+    
+    [[self dataSource] removeObjectAtIndex:index];
+    [[self popupOverlayer] removeItemAtIndex:index onDirection:POPopupOverlayerAnimationDirectionBottom animated:YES];
 }
 
 - (IBAction)didClickClose:(id)sender{
